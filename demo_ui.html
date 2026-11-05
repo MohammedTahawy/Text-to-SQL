@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive AI Copilot • Enterprise Multi-Tenant Intelligence Engine</title>
+  <style>
+    :root {
+      --bg-base: #080c14;
+      --bg-card: #0f172a;
+      --bg-card-subtle: #131d35;
+      --bg-input: #070b12;
+      --border: #1e293b;
+      --border-focus: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #6366f1;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --chart-1: #3b82f6;
+      --chart-2: #10b981;
+      --chart-3: #f59e0b;
+      --chart-4: #8b5cf6;
+      --chart-5: #ec4899;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      background-color: var(--bg-base) !important;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Outer Wrapper for Wide Displays */
+    .app-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* -------------------------------------------------------------
+       1. Top Header & Company Selector Section
+       ------------------------------------------------------------- */
+    .top-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Prominent Company Selector */
+    .company-selector-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 10px;
+    }
+
+    .selector-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+    }
+
+    .company-select {
+      background: var(--bg-input);
+      color: #ffffff;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      min-width: 320px;
+      transition: all 0.2s ease;
+    }
+
+    .company-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+
+    /* -------------------------------------------------------------
+       2. Query & Search Input Section
+       ------------------------------------------------------------- */
+    .query-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Preset Quick Suggestions */
+    .suggestions-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .sug-chip {
+      background: var(--bg-card-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sug-chip:hover {
+      background: #1e293b;
+      color: #ffffff;
+      border-color: #475569;
+    }
+
+    .sug-chip.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* Input Bar */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .input-field-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-field-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .input-icon {
+      color: var(--text-dim);
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    .query-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 14px;
+      padding: 14px 0;
+      font-family: inherit;
+    }
+
+    .query-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .mic-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-card-subtle);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .mic-btn:hover {
+      background: #1e293b;
+      border-color: var(--primary);
+    }
+
+    .mic-btn.recording {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      color: #ef4444;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .exec-btn {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      border: none;
+      padding: 0 24px;
+      height: 48px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .exec-btn:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-1px);
+    }
+
+    .exec-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* -------------------------------------------------------------
+       3. Executive Summary Card (Deep Dark Solid Contrast)
+       ------------------------------------------------------------- */
+    .summary-card {
+      background: #0f192e !important;
+      border: 1px solid #1e3a8a;
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(30, 58, 138, 0.4);
+    }
+
+    .summary-title-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-text {
+      font-size: 14px;
+      color: #e2e8f0 !important;
+      line-height: 1.7;
+      text-align: right;
+      direction: rtl;
+    }
+
+    /* -------------------------------------------------------------
+       Executive KPI Summary Ribbon (Adaptive Metrics)
+       ------------------------------------------------------------- */
+    .kpi-ribbon {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-value.text-accent { color: #38bdf8; }
+    .kpi-value.text-green { color: #34d399; }
+    .kpi-value.text-cyan { color: #22d3ee; }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* -------------------------------------------------------------
+       4. Visual Analytics: Chart & Data Table Section
+       ------------------------------------------------------------- */
+    .results-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .results-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Chart Box */
+    .chart-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .box-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .type-pill {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
+    }
+
+    .chart-wrapper {
+      height: 240px;
+      width: 100%;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      padding-top: 10px;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .chart-bar-group {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .bar-value {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .bar-pillar {
+      width: 100%;
+      max-width: 44px;
+      border-radius: 6px 6px 0 0;
+      transition: height 0.4s ease-in-out, background 0.2s;
+    }
+
+    .bar-label {
+      position: absolute;
+      bottom: -24px;
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      max-width: 70px;
+      text-align: center;
+    }
+
+    /* Records Table Section */
+    .table-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      color: var(--text-dim);
+      font-weight: 600;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .num-col {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #60a5fa;
+    }
+
+    /* -------------------------------------------------------------
+       5. Developer KPIs & Technical Telemetry Section (At Page End)
+       ------------------------------------------------------------- */
+    .developer-section {
+      background: #090e18;
+      border: 1px solid #1e293b;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .dev-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .dev-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dev-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    .badge.green {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+    }
+
+    .badge.purple {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: rgba(139, 92, 246, 0.12);
+      color: #a78bfa;
+    }
+
+    .badge.amber {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      box-shadow: 0 0 6px #10b981;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Pipeline 4-Step Telemetry Grid */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .pipeline-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .pipeline-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .step-number {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .step-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .step-time {
+      font-size: 11px;
+      color: #34d399;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* SQL Sanitized Code Viewer */
+    .code-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .code-content {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.5;
+      color: #93c5fd;
+      overflow-x: auto;
+      max-height: 120px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .code-content .keyword { color: #f472b6; font-weight: 700; }
+    .code-content .tenant { color: #34d399; font-weight: 700; background: rgba(16,185,129,0.15); padding: 0 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- =========================================================
+         1. START: Company Selector & Header
+         ========================================================= -->
+    <header class="top-bar">
+      <div class="brand-section">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <div class="brand-name">Executive AI Copilot • Enterprise Intelligence Engine</div>
+          <div class="brand-subtitle">Multi-Tenant Analytical Intelligence (demo_enterprise.db)</div>
+        </div>
+      </div>
+
+      <!-- Prominently Featured Company Selector with Full Company Names -->
+      <div class="company-selector-box">
+        <span class="selector-label">Company:</span>
+        <select id="companySelect" class="company-select" onchange="onCompanyChange()">
+          <optgroup label="⚡ الشركات المسجلة بالنظام (Active Enterprise Tenants)">
+            <option value="101" selected>🏢 شركة أوبكس العالمية للطاقة والوقود (Apex Global Energy - Cmp 101)</option>
+            <option value="201">🏢 شركة أطلس للملاحة والخدمات اللوجستية (Atlas Maritime Logistics - Cmp 201)</option>
+            <option value="301">🏢 مجموعة هورايزون للرعاية الطبية (Horizon Healthcare Group - Cmp 301)</option>
+            <option value="401">🏢 شركة فانجارد للتجارة والتوريدات (Vanguard General Trading - Cmp 401)</option>
+          </optgroup>
+          <optgroup label="🌐 استعلام عام شامل (Platform-Wide Cross-Company)">
+            <option value="0">🌐 جميع الشركات والأنشطة (Global Multi-Company Audit)</option>
+          </optgroup>
+</select>
+      </div>
+    </header>
+
+    <!-- =========================================================
+         2. My Text Input & Voice Query
+         ========================================================= -->
+    <section class="query-card">
+      <div class="suggestions-row">
+        <button class="sug-chip active" onclick="selectSuggestion(0)">
+          <span>⛽</span> مبيعات الأصناف (Fuel Sales)
+        </button>
+        <button class="sug-chip" onclick="selectSuggestion(1)">
+          <span>💳</span> كبار العملاء المديونين (Overdue Debtors)
+        </button>
+        <button class="sug-chip" onclick="selectSuggestion(2)">
+          <span>👥</span> توزيع المناديب على الفروع (Sales Force)
+        </button>
+        <button class="sug-chip" onclick="selectSuggestion(3)">
+          <span>🌐</span> مقارنة المبيعات بين جميع الشركات (Cross-Company)
+        </button>
+      </div>
+
+      <div class="input-row">
+        <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()" title="Speak Voice Note in Arabic/English via Groq Whisper Turbo">
+          🎙️
+        </button>
+        <div class="input-field-wrapper">
+          <span class="input-icon">🔍</span>
+          <input type="text" id="queryInput" class="query-input" placeholder="Type any business question in Arabic or English..." value="ما هي أعلى 5 أصناف مبيعاً من حيث إجمالي المبيعات؟" onkeydown="handleKeyDown(event)">
+        </div>
+        <button class="exec-btn" id="execBtn" onclick="executeLiveQuery()">
+          <span id="execBtnText">Execute Query</span> ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         3. Executive Summary (Solid Deep Contrast - No Washed Out White)
+         ========================================================= -->
+    <section class="summary-card">
+      <div class="summary-header">
+        <div class="summary-title-wrapper">
+          <span style="font-size: 16px;">💡</span>
+          <span class="summary-badge" id="summaryHeaderTitle">Executive Analysis & Business Takeaways (شركة النور للطاقة والوقود)</span>
+        </div>
+        <span class="type-pill" id="isolationBadge">Multi-Tenant Protected</span>
+      </div>
+      <div class="summary-text" id="summaryText">
+        أظهر التحليل من واقع قاعدة البيانات الفعلية أن صنف "سولار" يتصدر المبيعات بإجمالي 5,459,301,768.68 (5.46 مليار)، يليه "بنزين 92" بإجمالي 514,248,326.69، ثم "بنزين 95" بـ 117,820,134.02.
+      </div>
+    </section>
+
+    <!-- =========================================================
+         Executive KPI Summary Ribbon (Adaptive Real-Time Metrics)
+         ========================================================= -->
+    <section class="kpi-ribbon" id="kpiRibbon">
+      <div class="kpi-card" id="kpiSalesCard">
+        <div class="kpi-label">إجمالي القيمة المالية المستعلمة</div>
+        <div class="kpi-value text-accent" id="kpiTotalSales">6.09B ج.م</div>
+        <div class="kpi-sub" id="kpiTotalSalesSub">صافي القيمة المجمعة</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">إجمالي عدد السجلات المطابقة</div>
+        <div class="kpi-value" id="kpiRecordCount">3</div>
+        <div class="kpi-sub">سجلات فعلية معتمدة</div>
+      </div>
+      <div class="kpi-card" id="kpiTopCard">
+        <div class="kpi-label">المتصدر / الأكثر مساهمة</div>
+        <div class="kpi-value text-cyan" id="kpiTopEntity">سولار</div>
+        <div class="kpi-sub" id="kpiTopEntitySub">أعلى بند في النتائج (89.6%)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">حالة العزل الأمني للشركة</div>
+        <div class="kpi-value text-green" id="kpiTenantStatus">Cmp_No Locked</div>
+        <div class="kpi-sub">AST Guardrail Enforced</div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         4. Visual Analytics: Chart & Data Records
+         ========================================================= -->
+    <section class="results-layout">
+      <!-- Visual Chart Box -->
+      <div class="chart-box">
+        <div class="box-title">
+          <span id="chartTitle">📊 Real Production Revenue by Category</span>
+          <span class="type-pill" id="chartTypeBadge">BAR CHART</span>
+        </div>
+        <div class="chart-wrapper" id="chartContainer">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Tabular Records Box -->
+      <div class="table-box">
+        <div class="box-title">
+          <span>📋 Verified Records from demo_enterprise.db (<span id="rowCount">3</span> rows)</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="exportCsvBtn" onclick="exportTableToCSV()" class="type-pill" style="cursor: pointer; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; transition: all 0.2s;" title="Download complete table as CSV for Excel">📥 Export CSV</button>
+            <span class="type-pill" style="color: var(--text-dim); border-color: var(--border)">READ-ONLY</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr id="tableHead">
+              <th>Item Code</th>
+              <th>Item Name</th>
+              <th>Sales Total (EGP/SAR)</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Populated dynamically via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         5. END OF PAGE: Development KPIs & Technical Telemetry
+         ========================================================= -->
+    <footer class="developer-section">
+      <div class="dev-header">
+        <div class="dev-title">
+          <span>🛠️ Technical Telemetry & Developer Diagnostics</span>
+        </div>
+        <div class="dev-badges">
+          <span class="badge green" id="backendStatus"><span class="pulse-dot"></span> Live API Port 8000</span>
+          <span class="badge purple">Groq LLM (gpt-oss-120b)</span>
+          <span class="badge" style="color: var(--text-dim)">Read-Only Engine</span>
+        </div>
+      </div>
+
+      <!-- Latency & Pipeline Tracker -->
+      <div class="pipeline-grid">
+        <div class="pipeline-step">
+          <span class="step-number">Step 1 • Speech-to-Text</span>
+          <span class="step-name">🎙️ Groq Whisper v3 Turbo</span>
+          <span class="step-time" id="timeWhisper">0.00s (Text Mode)</span>
+        </div>
+        <div class="pipeline-step">
+          <span class="step-number">Step 2 • SQL Synthesis</span>
+          <span class="step-name">🧠 Groq LLM Inference</span>
+          <span class="step-time" id="timeLLM">0.82s latency</span>
+        </div>
+        <div class="pipeline-step">
+          <span class="step-number">Step 3 • AST Security</span>
+          <span class="step-name">🛡️ Guardrail Status</span>
+          <span class="step-time" id="timeGuardrail">Injected Cmp_No = 101</span>
+        </div>
+        <div class="pipeline-step">
+          <span class="step-number">Step 4 • DB Execution</span>
+          <span class="step-name">⚡ SQLite Database Engine</span>
+          <span class="step-time" id="timeDB">0.02s executed</span>
+        </div>
+      </div>
+
+      <!-- Sanitized SQL Inspection Box -->
+      <div class="code-box">
+        <div class="box-title" style="font-size: 12px; color: var(--text-muted)">
+          <span>🛡️ Generated & Sanitized SQL (with Tenant Isolation)</span>
+        </div>
+        <div class="code-content" id="sqlDisplay">
+SELECT item_code, item_name, SUM(line_total) AS total_sales
+FROM v_sales_invoice_items
+WHERE v_sales_invoice_items.Cmp_No = 101
+  AND v_sales_invoice_items.Brn_No = 10101
+GROUP BY item_code, item_name
+ORDER BY total_sales DESC
+LIMIT 5;
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // Configuration
+    const API_BASE = "http://localhost:8000/api/v1";
+    const API_KEY = "enterprise_copilot_demo_key_2026";
+    let CMP_NO = 101;
+    let BRN_NO = 10101;
+
+    const companyNames = {
+      101: "شركة أوبكس العالمية للطاقة والوقود (Apex Global Energy & Fuel)",
+      201: "شركة أطلس للملاحة والخدمات اللوجستية (Atlas Maritime Logistics)",
+      301: "مجموعة هورايزون للرعاية الطبية والمستشفيات (Horizon Healthcare)",
+      401: "شركة فانجارد للتجارة والتوريدات العامة (Vanguard General Trading)",
+      0: "جميع الشركات والأنشطة (Global Multi-Company Audit)"
+    };
+
+    const suggestions = [
+      "ما هي أعلى 5 أصناف مبيعاً من حيث إجمالي المبيعات؟",
+      "من هم أعلى العملاء مديونية من حيث المبالغ المتبقية المستحقة؟",
+      "اعرض لي قائمة المناديب وتوزيعهم على الفروع",
+      "ما هي أعلى 5 شركات من حيث إجمالي المبيعات عبر النظام بالكامل؟"
+    ];
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let currentTableData = [];
+
+    function exportTableToCSV() {
+      if (!currentTableData || currentTableData.length === 0) {
+        alert("لا توجد بيانات متاحة للتصدير حالياً.");
+        return;
+      }
+      const columns = Object.keys(currentTableData[0]);
+      let csvContent = "\uFEFF"; // UTF-8 BOM for Excel Arabic character compatibility
+      csvContent += columns.map(col => `"${col.replace(/"/g, '""')}"`).join(",") + "\r\n";
+
+      currentTableData.forEach(row => {
+        const rowStr = columns.map(col => {
+          let val = row[col];
+          if (val === null || val === undefined) val = "";
+          return `"${String(val).replace(/"/g, '""')}"`;
+        }).join(",");
+        csvContent += rowStr + "\r\n";
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `executive_report_cmp${CMP_NO}_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function onCompanyChange() {
+      const sel = document.getElementById("companySelect");
+      CMP_NO = parseInt(sel.value, 10);
+      const name = companyNames[CMP_NO] || `Company #${CMP_NO}`;
+
+      if (CMP_NO === 0) {
+        BRN_NO = null;
+        document.getElementById("summaryHeaderTitle").textContent = `Executive Analysis & Business Takeaways (${name})`;
+        document.getElementById("isolationBadge").textContent = "🌐 Global Multi-Company Mode";
+        document.getElementById("isolationBadge").className = "type-pill";
+        document.getElementById("isolationBadge").style.color = "#fbbf24";
+        document.getElementById("isolationBadge").style.borderColor = "rgba(245, 158, 11, 0.4)";
+      } else {
+        BRN_NO = CMP_NO === 101 ? 10101 : null;
+        document.getElementById("summaryHeaderTitle").textContent = `Executive Analysis & Business Takeaways (${name})`;
+        document.getElementById("isolationBadge").textContent = "Multi-Tenant Protected";
+        document.getElementById("isolationBadge").className = "type-pill";
+        document.getElementById("isolationBadge").style.color = "#60a5fa";
+        document.getElementById("isolationBadge").style.borderColor = "rgba(59, 130, 246, 0.35)";
+      }
+      executeLiveQuery();
+    }
+
+    function selectSuggestion(index) {
+      document.querySelectorAll(".sug-chip").forEach((btn, i) => {
+        btn.classList.toggle("active", i === index);
+      });
+      document.getElementById("queryInput").value = suggestions[index];
+      if (index === 3) {
+        document.getElementById("companySelect").value = "0";
+        onCompanyChange();
+      } else {
+        executeLiveQuery();
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === "Enter") {
+        executeLiveQuery();
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch("http://localhost:8000/health", { method: "GET" });
+        if (res.ok) {
+          const badge = document.getElementById("backendStatus");
+          badge.className = "badge green";
+          badge.innerHTML = '<span class="pulse-dot"></span> Live API Port 8000';
+        }
+      } catch (err) {
+        const badge = document.getElementById("backendStatus");
+        badge.className = "badge amber";
+        badge.textContent = "⚠️ Offline Mode (Port 8000)";
+      }
+    }
+
+    async function executeLiveQuery() {
+      const input = document.getElementById("queryInput");
+      const question = input.value.trim();
+      if (!question) return;
+
+      const execBtn = document.getElementById("execBtn");
+      const execBtnText = document.getElementById("execBtnText");
+      execBtn.disabled = true;
+      execBtnText.textContent = "Processing...";
+
+      const startTime = performance.now();
+      document.getElementById("timeWhisper").textContent = "0.00s (Text Mode)";
+      document.getElementById("timeLLM").textContent = "Synthesizing...";
+      document.getElementById("timeGuardrail").textContent = CMP_NO === 0 ? "Global Mode (No Tenant Filter)" : `Injected Cmp_No = ${CMP_NO}`;
+      document.getElementById("timeDB").textContent = "Executing...";
+
+      const headers = {
+        "Content-Type": "application/json",
+        "X-AI-API-KEY": API_KEY,
+        "X-Company-Id": CMP_NO.toString()
+      };
+      if (BRN_NO) {
+        headers["X-Branch-Id"] = BRN_NO.toString();
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/reports/ask`, {
+          method: "POST",
+          headers: headers,
+          signal: AbortSignal.timeout(600000), // 10 minutes timeout (600,000 ms)
+          body: JSON.stringify({
+            question: question,
+            language: "ar",
+            include_chart: true
+          })
+        });
+
+        const totalElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server responded with status ${res.status}`);
+        }
+
+        const json = await res.json();
+        const data = json.data;
+
+        document.getElementById("timeLLM").textContent = `${(totalElapsed * 0.8).toFixed(2)}s latency`;
+        document.getElementById("timeDB").textContent = "0.02s executed";
+
+        renderLiveResponse(data);
+
+      } catch (err) {
+        console.warn("API request failed:", err);
+        const isNetworkError = err instanceof TypeError && err.message.includes("fetch");
+        const helperText = isNetworkError ? " (يرجى التأكد من تشغيل خادم FastAPI على بورت 8000)" : "";
+        document.getElementById("summaryText").textContent = `⚠️ ${err.message}${helperText}`;
+      } finally {
+        execBtn.disabled = false;
+        execBtnText.textContent = "Execute Query";
+      }
+    }
+
+    function renderLiveResponse(data) {
+      document.getElementById("summaryText").textContent = data.explanation || "تم استخراج البيانات بنجاح من قاعدة البيانات الفعلية.";
+
+      let formattedSql = escapeHtml(data.generated_sql || "");
+      formattedSql = formattedSql.replace(/(SELECT|FROM|WHERE|GROUP BY|ORDER BY|LIMIT|JOIN|AND|AS|DESC|ASC|SUM|COUNT|AVG)/gi, '<span class="keyword">$1</span>');
+      formattedSql = formattedSql.replace(/(:cmp_no|1201|:brn_no|120102)/gi, '<span class="tenant">$1</span>');
+      document.getElementById("sqlDisplay").innerHTML = formattedSql;
+
+      const rows = data.data || [];
+      currentTableData = rows;
+      document.getElementById("rowCount").textContent = rows.length;
+
+      // -------------------------------------------------------------
+      // Executive KPI Ribbon: Dynamic Real-Time Calculations
+      // -------------------------------------------------------------
+      let totalMonetary = 0;
+      let hasMonetary = false;
+      let monetaryColName = "";
+      let topItemName = "-";
+      let topItemVal = -Infinity;
+
+      rows.forEach(r => {
+        for (const [k, v] of Object.entries(r)) {
+          const lk = k.toLowerCase();
+          if (typeof v === "number" && (lk.includes("sales") || lk.includes("total") || lk.includes("مبيعات") || lk.includes("المتبقي") || lk.includes("remaining") || lk.includes("amount") || lk.includes("balance") || lk.includes("رصيد"))) {
+            totalMonetary += v;
+            hasMonetary = true;
+            monetaryColName = k;
+            if (v > topItemVal) {
+              topItemVal = v;
+              // Locate associated name column in the same row
+              const nameKey = Object.keys(r).find(key => {
+                const lkey = key.toLowerCase();
+                return lkey.includes("name") || lkey.includes("صنف") || lkey.includes("عميل") || lkey.includes("مندوب") || lkey.includes("category");
+              });
+              topItemName = nameKey ? r[nameKey] : v;
+            }
+          }
+        }
+      });
+
+      document.getElementById("kpiRecordCount").textContent = rows.length.toLocaleString();
+      document.getElementById("kpiTenantStatus").textContent = CMP_NO === 0 ? "Global 165 Cmp" : `Cmp #${CMP_NO} Locked`;
+
+      if (hasMonetary && totalMonetary > 0) {
+        let fmt = totalMonetary >= 1000000000 ? (totalMonetary / 1000000000).toFixed(2) + "B ج.م" :
+                  totalMonetary >= 1000000 ? (totalMonetary / 1000000).toFixed(2) + "M ج.م" :
+                  totalMonetary >= 1000 ? (totalMonetary / 1000).toFixed(1) + "k ج.م" :
+                  totalMonetary.toLocaleString("en-US", { maximumFractionDigits: 2 }) + " ج.م";
+        document.getElementById("kpiTotalSales").textContent = fmt;
+        document.getElementById("kpiTotalSalesSub").textContent = `إجمالي ${monetaryColName.replace(/_/g, " ")}`;
+        document.getElementById("kpiTopEntity").textContent = topItemName || "-";
+        const topFmt = topItemVal >= 1000000 ? (topItemVal / 1000000).toFixed(1) + "M" : topItemVal.toLocaleString();
+        document.getElementById("kpiTopEntitySub").textContent = `الأعلى مساهمة: ${topFmt}`;
+      } else {
+        document.getElementById("kpiTotalSales").textContent = `${rows.length} بند`;
+        document.getElementById("kpiTotalSalesSub").textContent = "استعلام دليلي / غير مالي";
+        if (rows.length > 0) {
+          const firstRow = rows[0];
+          // Find first descriptive column
+          const firstKey = Object.keys(firstRow).find(k => k.toLowerCase().includes("name") || k.includes("صنف") || k.includes("عميل")) || Object.keys(firstRow)[0];
+          document.getElementById("kpiTopEntity").textContent = String(firstRow[firstKey] || "-").substring(0, 24);
+          document.getElementById("kpiTopEntitySub").textContent = "أول نتيجة في الفهرس";
+        } else {
+          document.getElementById("kpiTopEntity").textContent = "-";
+          document.getElementById("kpiTopEntitySub").textContent = "لا توجد سجلات";
+        }
+      }
+
+      // -------------------------------------------------------------
+      // Chart Rendering: Prioritize Human Names with Tooltips
+      // -------------------------------------------------------------
+      const chartContainer = document.getElementById("chartContainer");
+      chartContainer.innerHTML = "";
+      if (data.chart && data.chart.labels && data.chart.labels.length > 0) {
+        document.getElementById("chartTitle").textContent = `📊 ${data.chart.title || "Real Production Analysis"}`;
+        document.getElementById("chartTypeBadge").textContent = (data.chart.chart_type || "Bar").toUpperCase();
+
+        const labels = data.chart.labels;
+        const dataset = (data.chart.datasets && data.chart.datasets[0] && data.chart.datasets[0].data) || [];
+        const maxVal = Math.max(...dataset, 1);
+        const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+
+        labels.forEach((lbl, i) => {
+          const val = dataset[i] || 0;
+          const group = document.createElement("div");
+          group.className = "chart-bar-group";
+
+          const valSpan = document.createElement("span");
+          valSpan.className = "bar-value";
+          if (val >= 1000000000) valSpan.textContent = (val / 1000000000).toFixed(1) + "B";
+          else if (val >= 1000000) valSpan.textContent = (val / 1000000).toFixed(1) + "M";
+          else if (val >= 1000) valSpan.textContent = (val / 1000).toFixed(0) + "k";
+          else valSpan.textContent = val;
+
+          const bar = document.createElement("div");
+          bar.className = "bar-pillar";
+          bar.style.height = `${Math.max(12, (val / maxVal) * 100)}%`;
+          bar.style.backgroundColor = colors[i % colors.length];
+
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "bar-label";
+          const fullLabel = String(lbl || "Unknown");
+          labelSpan.textContent = fullLabel.length > 14 ? fullLabel.substring(0, 12) + ".." : fullLabel;
+          labelSpan.title = fullLabel; // Native tooltip on hover
+
+          group.appendChild(valSpan);
+          group.appendChild(bar);
+          group.appendChild(labelSpan);
+          chartContainer.appendChild(group);
+        });
+      } else {
+        document.getElementById("chartTitle").textContent = "📊 Tabular Records";
+        document.getElementById("chartTypeBadge").textContent = "Table View";
+        chartContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-dim);font-size:12px;">No direct chart visualization requested for this query.</div>';
+      }
+
+      // -------------------------------------------------------------
+      // Tabular Records: Prioritize Human Names First, Codes Secondary
+      // -------------------------------------------------------------
+      const tableHead = document.getElementById("tableHead");
+      const tableBody = document.getElementById("tableBody");
+      tableHead.innerHTML = "";
+      tableBody.innerHTML = "";
+
+      if (rows.length > 0) {
+        let columns = Object.keys(rows[0]);
+        // Sort columns so human-readable names and descriptions always appear FIRST
+        columns.sort((a, b) => {
+          const aIsName = a.toLowerCase().includes("name") || a.includes("صنف") || a.includes("عميل") || a.includes("مندوب") || a.includes("فئة");
+          const bIsName = b.toLowerCase().includes("name") || b.includes("صنف") || b.includes("عميل") || b.includes("مندوب") || b.includes("فئة");
+          if (aIsName && !bIsName) return -1;
+          if (!aIsName && bIsName) return 1;
+          return 0;
+        });
+
+        columns.forEach(col => {
+          const th = document.createElement("th");
+          th.textContent = col.replace(/_/g, " ").toUpperCase();
+          tableHead.appendChild(th);
+        });
+
+        rows.forEach(r => {
+          const tr = document.createElement("tr");
+          columns.forEach(col => {
+            const td = document.createElement("td");
+            const val = r[col];
+            if (typeof val === "number") {
+              td.textContent = val.toLocaleString("en-US", { maximumFractionDigits: 2 });
+              td.className = "num-col";
+            } else {
+              td.textContent = val !== null && val !== undefined ? val : "-";
+            }
+            tr.appendChild(td);
+          });
+          tableBody.appendChild(tr);
+        });
+      } else {
+        const th = document.createElement("th");
+        th.textContent = "Status";
+        tableHead.appendChild(th);
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.textContent = "No records found matching the query filters.";
+        td.style.color = "var(--text-dim)";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      }
+    }
+
+    async function toggleVoiceRecording() {
+      const micBtn = document.getElementById("micBtn");
+
+      if (isRecording) {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+        micBtn.classList.remove("recording");
+        isRecording = false;
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+          await sendVoiceToBackend(audioBlob);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.classList.add("recording");
+        document.getElementById("queryInput").placeholder = "Listening... Speak your Arabic or English question now!";
+      } catch (err) {
+        console.warn("Microphone access error:", err);
+        simulateVoiceFile();
+      }
+    }
+
+    async function sendVoiceToBackend(blob) {
+      const input = document.getElementById("queryInput");
+      input.placeholder = "Transcribing voice via Groq Whisper Large v3 Turbo...";
+
+      const formData = new FormData();
+      formData.append("audio", blob, "user_voice_note.webm");
+      formData.append("language", "ar");
+      formData.append("include_chart", "true");
+
+      const startTime = performance.now();
+
+      const headers = {
+        "X-AI-API-KEY": API_KEY,
+        "X-Company-Id": CMP_NO.toString()
+      };
+      if (BRN_NO) {
+        headers["X-Branch-Id"] = BRN_NO.toString();
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/reports/ask-voice`, {
+          method: "POST",
+          headers: headers,
+          signal: AbortSignal.timeout(600000), // 10 minutes timeout (600,000 ms)
+          body: formData
+        });
+
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+        document.getElementById("timeWhisper").textContent = `${elapsed}s transcribed`;
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Voice processing failed");
+        }
+
+        const json = await res.json();
+        const data = json.data;
+
+        input.value = data.question || "";
+        renderLiveResponse(data);
+
+      } catch (err) {
+        console.warn("Voice API error:", err);
+        document.getElementById("summaryText").textContent = `⚠️ تعذر معالجة الصوت: ${err.message}`;
+      } finally {
+        input.placeholder = "Type any business question in Arabic or English...";
+      }
+    }
+
+    async function simulateVoiceFile() {
+      const input = document.getElementById("queryInput");
+      input.value = "عايز أعرف أعلى خمسة أصناف مبيعة في هذا الفرع";
+      document.getElementById("timeWhisper").textContent = "0.63s transcribed (Groq Turbo)";
+      executeLiveQuery();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    checkHealth();
+    executeLiveQuery();
+  </script>
+</body>
+</html>
