@@ -8,6 +8,13 @@
 [![Groq LLM](https://img.shields.io/badge/Inference-Groq%20Cloud-f55036.svg?logo=fastapi&logoColor=white)](https://groq.com)
 [![Whisper v3 Turbo](https://img.shields.io/badge/STT-Whisper%20v3%20Turbo-10a37f.svg?logo=openai&logoColor=white)](https://openai.com)
 [![AST Guardrails](https://img.shields.io/badge/Security-sqlglot%20AST-orange.svg)](https://github.com/tobymao/sqlglot)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-2563eb.svg?style=for-the-badge&logo=githubpages&logoColor=white)](https://mohammedtahawy.github.io/Text-to-SQL/)
+
+<br/>
+
+> 🌐 **Live Interactive Website:** **[https://mohammedtahawy.github.io/Text-to-SQL/](https://mohammedtahawy.github.io/Text-to-SQL/)**  
+> Anyone can open this link to test queries, view synthesized SQL with tenant isolation, live charts, and export CSV directly in their browser without installing anything!
+
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
