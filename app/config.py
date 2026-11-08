@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     
     # AI_SERVICE_API_KEY: Internal shared secret token. Requests originating from Laravel
     # must include this token in the 'X-AI-API-KEY' HTTP header to prevent unauthorized access.
-    AI_SERVICE_API_KEY: str = "enterprise_copilot_demo_key_2026"
+    AI_SERVICE_API_KEY: str = "infosas_secret_ai_token_change_in_production"
 
     # --- 2. LLM Provider Configurations ---
     # DEFAULT_LLM_PROVIDER: Active AI provider ('groq', 'openai', or 'gemini')
@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     # Groq OpenAI-compatible base URL endpoint
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    # Maximum concurrent requests permitted to Groq (protects against TPM/RPM 429 rate limit errors)
+    GROQ_MAX_CONCURRENCY: int = 3
 
     # OpenAI Settings (fallback / alternate provider)
     OPENAI_API_KEY: Optional[str] = None
@@ -64,13 +66,13 @@ class Settings(BaseSettings):
     # DB_TYPE: 'sqlite' for immediate out-of-the-box local testing, 'mysql' for production ERP
     DB_TYPE: str = "sqlite"
     # Local SQLite database filename
-    SQLITE_PATH: str = "demo_enterprise.db"
+    SQLITE_PATH: str = "infosas_erp.db"
     
     # Production MySQL Database Settings (active when DB_TYPE='mysql')
     DB_HOST: str = "127.0.0.1"          # MySQL server host / IP
     DB_PORT: int = 3306                 # Default MySQL port
-    DB_NAME: str = "enterprise_erp"        # Enterprise ERP database name
-    DB_USER: str = "enterprise_readonly"   # Read-only user for strict security
+    DB_NAME: str = "infosas_erp"        # InfoSas ERP database name
+    DB_USER: str = "infosas_readonly"   # Read-only user for strict security
     DB_PASSWORD: str = "readonly_strong_pass"
     DB_POOL_SIZE: int = 10              # Persistent connection pool size
     DB_MAX_OVERFLOW: int = 20           # Maximum overflow connections during peak spikes
@@ -78,7 +80,7 @@ class Settings(BaseSettings):
     # --- 4. WhatsApp Business Cloud API Settings ---
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None  # Registered Phone Number ID in Meta Developer portal
     WHATSAPP_ACCESS_TOKEN: Optional[str] = None     # Permanent System User Bearer Token from Meta
-    WHATSAPP_VERIFY_TOKEN: str = "enterprise_copilot_whatsapp_webhook_2026"  # Verification token for webhook handshake
+    WHATSAPP_VERIFY_TOKEN: str = "infosas_webhook_verify_token_2026"  # Verification token for webhook handshake
 
     # --- 5. Redis Cache Settings ---
     # Used for semantic caching of frequently asked SQL queries to reduce API costs to $0
@@ -90,7 +92,7 @@ class Settings(BaseSettings):
         Dynamic property that constructs the appropriate SQLAlchemy database URI
         based on the selected DB_TYPE (SQLite vs MySQL via PyMySQL).
         """
-        # If SQLite is selected, resolve absolute path to demo_enterprise.db
+        # If SQLite is selected, resolve absolute path to infosas_erp.db
         if self.DB_TYPE.lower() == "sqlite":
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             db_path = os.path.join(base_dir, self.SQLITE_PATH)

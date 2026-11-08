@@ -18,8 +18,9 @@ from typing import BinaryIO, Union
 # OpenAI client interface used to interact with Whisper audio endpoints
 from openai import OpenAI
 
-# Application settings instance
+    # Application settings instance
 from app.config import settings
+from app.core.llm import groq_concurrency_semaphore
 
 # Logger instance
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def get_whisper_client() -> OpenAI:
         return OpenAI(
             api_key=settings.GROQ_API_KEY,
             base_url=settings.GROQ_BASE_URL,
-            default_headers={"User-Agent": "Executive-AI-Copilot/1.0"}
+            default_headers={"User-Agent": "InfoSas-AI/1.0"}
         )
     elif settings.OPENAI_API_KEY:
         return OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -72,13 +73,14 @@ def transcribe_audio_file(
         audio_target = file_obj
 
     try:
-        # Submit audio payload to Whisper endpoint
-        transcription = client.audio.transcriptions.create(
-            model=model_name,
-            file=audio_target,
-            language=language,
-            temperature=0.0  # 0.0 enforces deterministic transcription without hallucinated words
-        )
+        # Submit audio payload to Whisper endpoint with concurrency control
+        with groq_concurrency_semaphore:
+            transcription = client.audio.transcriptions.create(
+                model=model_name,
+                file=audio_target,
+                language=language,
+                temperature=0.0  # 0.0 enforces deterministic transcription without hallucinated words
+            )
         text = transcription.text.strip()
         logger.info(f"Whisper transcription successful ({len(text)} chars): '{text}'")
         return text

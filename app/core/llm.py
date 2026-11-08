@@ -12,6 +12,9 @@ import logging
 # Regular expressions module
 import re
 
+# Threading module for thread-safe active concurrency limiting
+import threading
+
 # Typing utilities
 from typing import List, Dict, Any, Optional
 
@@ -23,6 +26,9 @@ from app.config import settings
 
 # Logger instance
 logger = logging.getLogger(__name__)
+
+# Active concurrency limiter (prevents exceeding Groq TPM / RPM rate limits)
+groq_concurrency_semaphore = threading.Semaphore(settings.GROQ_MAX_CONCURRENCY)
 
 
 class LLMClient:
@@ -50,7 +56,7 @@ class LLMClient:
             self.client = OpenAI(
                 api_key=settings.GROQ_API_KEY,
                 base_url=settings.GROQ_BASE_URL,
-                default_headers={"User-Agent": "Executive-AI-Copilot/1.0"}
+                default_headers={"User-Agent": "InfoSas-AI/1.0"}
             )
         elif self.provider == "openai" and settings.OPENAI_API_KEY:
             logger.info("Initializing OpenAI LLM Client")
@@ -61,7 +67,7 @@ class LLMClient:
                 self.client = OpenAI(
                     api_key=settings.GROQ_API_KEY,
                     base_url=settings.GROQ_BASE_URL,
-                    default_headers={"User-Agent": "Executive-AI-Copilot/1.0"}
+                    default_headers={"User-Agent": "InfoSas-AI/1.0"}
                 )
             elif settings.OPENAI_API_KEY:
                 self.provider = "openai"
@@ -112,18 +118,20 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
 
-        try:
-            response = self.client.chat.completions.create(**kwargs)
-            content = response.choices[0].message.content or ""
-            return content.strip()
-        except Exception as e:
-            # Fallback resilience: Some open-weights models on Groq might reject response_format parameter
-            if response_format and "response_format" in str(e).lower():
-                logger.warning(f"Retrying chat completion without response_format due to: {e}")
-                kwargs.pop("response_format", None)
+        with groq_concurrency_semaphore:
+            logger.debug(f"Acquired Groq concurrency slot (active limit: {settings.GROQ_MAX_CONCURRENCY})")
+            try:
                 response = self.client.chat.completions.create(**kwargs)
-                return (response.choices[0].message.content or "").strip()
-            raise e
+                content = response.choices[0].message.content or ""
+                return content.strip()
+            except Exception as e:
+                # Fallback resilience: Some open-weights models on Groq might reject response_format parameter
+                if response_format and "response_format" in str(e).lower():
+                    logger.warning(f"Retrying chat completion without response_format due to: {e}")
+                    kwargs.pop("response_format", None)
+                    response = self.client.chat.completions.create(**kwargs)
+                    return (response.choices[0].message.content or "").strip()
+                raise e
 
 
 # Centralized singleton instance
