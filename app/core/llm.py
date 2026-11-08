@@ -9,6 +9,9 @@
 # Standard logging module
 import logging
 
+# Time module for backoff sleeping
+import time
+
 # Regular expressions module
 import re
 
@@ -118,20 +121,31 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
 
+        max_retries = 3
         with groq_concurrency_semaphore:
             logger.debug(f"Acquired Groq concurrency slot (active limit: {settings.GROQ_MAX_CONCURRENCY})")
-            try:
-                response = self.client.chat.completions.create(**kwargs)
-                content = response.choices[0].message.content or ""
-                return content.strip()
-            except Exception as e:
-                # Fallback resilience: Some open-weights models on Groq might reject response_format parameter
-                if response_format and "response_format" in str(e).lower():
-                    logger.warning(f"Retrying chat completion without response_format due to: {e}")
-                    kwargs.pop("response_format", None)
+            for attempt in range(max_retries + 1):
+                try:
                     response = self.client.chat.completions.create(**kwargs)
-                    return (response.choices[0].message.content or "").strip()
-                raise e
+                    content = response.choices[0].message.content or ""
+                    return content.strip()
+                except Exception as e:
+                    err_str = str(e).lower()
+                    # Resilient backoff: Groq TPM / RPM 429 RateLimitError
+                    if "429" in err_str or "rate limit" in err_str:
+                        if attempt < max_retries:
+                            match = re.search(r"try again in ([\d\.]+)s", str(e), re.IGNORECASE)
+                            wait_sec = float(match.group(1)) + 1.0 if match else (attempt + 1) * 6.0
+                            logger.warning(f"Groq Rate limit (429) hit. Waiting {wait_sec:.2f}s before retry {attempt + 1}/{max_retries}...")
+                            time.sleep(wait_sec)
+                            continue
+                    # Fallback resilience: Some open-weights models on Groq might reject response_format parameter
+                    if response_format and "response_format" in err_str:
+                        logger.warning(f"Retrying chat completion without response_format due to: {e}")
+                        kwargs.pop("response_format", None)
+                        response = self.client.chat.completions.create(**kwargs)
+                        return (response.choices[0].message.content or "").strip()
+                    raise e
 
 
 # Centralized singleton instance
