@@ -1,66 +1,68 @@
 -- ====================================================================================================
 -- INFOSAS ERP & CRM - AI ANALYTICAL SEMANTIC LAYER (DATABASE VIEWS SPECIFICATION)
--- ملف الـ Semantic Layer المعتمد لمشروع الذكاء الاصطناعي في نظام إنفوساس (InfoSas ERP)
--- موجه إلى المهندس خالد (Lead Architect & CTO - InfoSas)
--- المسار: ai-service/app/modules/text_to_sql/views.sql
+-- Official Semantic Layer specification for the InfoSas ERP Artificial Intelligence Engine
+-- Addressed to Eng. Khaled (Lead Architect & CTO - InfoSas)
+-- File Path: ai-service/app/modules/text_to_sql/views.sql
 -- 
--- 1. الغرض المعماري (Architectural Rationale):
---    تحتوي قاعدة بيانات إنفوساس على أكثر من 717 جدولاً بأسماء واختصارات محاسبية قديمة (Legacy 4-letter abbreviations)
---    مثل (invlodhdr, invloddtl, mtsitmmfs, mtscustomer, astsalesman, pjbranchdlv).
---    إن تعريض كل هذه الجداول لنماذج الذكاء الاصطناعي (LLMs) يتسبب في:
---      أ) استهلاك هائل للـ Tokens وارتفاع التكلفة.
---      ب) زيادة احتمالية الهلوسة والربط الخاطئ بين الجداول (Hallucinations & Incorrect JOINs).
---      ج) مخاطر أمنية واختراق خصوصية المستخدمين (تسريب جداول sec_users و users).
---    لذلك قمنا ببناء هذه الطبقة الدلالية المكونة من 6 Views تحليلية موحدة ومفهرسة تغطي 100% من الاحتياجات المحاسبية.
+-- 1. Architectural Rationale:
+--    The InfoSas ERP database contains over 717 tables with legacy 4-letter accounting abbreviations
+--    such as (invlodhdr, invloddtl, mtsitmmfs, mtscustomer, astsalesman, pjbranchdlv).
+--    Exposing all raw tables directly to LLM context causes:
+--      a) Massive token consumption and high API latency/cost.
+--      b) Increased hallucinations and erroneous table joins across complex schema paths.
+--      c) Critical security and data privacy risks (potential leaks of sec_users, credentials, etc.).
+--    Therefore, this consolidated semantic layer provides 6 unified, pre-indexed analytical views
+--    covering 100% of executive accounting, sales, inventory, and customer intelligence queries.
 --
--- 2. مبدأ عزل بيانات الشركات (Multi-Tenant Isolation Architecture):
---    - جميع الـ Views تتضمن المعرفات المفتاحية `Cmp_No` (رقم الشركة) و `Brn_No` (رقم الفرع).
---    - يتم حقن شروط العزل `Cmp_No = :cmp_no` إجبارياً على مستوى الـ AST Parser عبر الـ Python Guardrails،
---      مما يضمن استحالة وصول أي شركة لبيانات شركة أخرى حتى لو حاول المستخدم التحايل بالسؤال.
+-- 2. Multi-Tenant Isolation Architecture:
+--    - All views strictly expose key tenant identifiers: `Cmp_No` (Company ID) and `Brn_No` (Branch ID).
+--    - Multi-tenant isolation conditions (`Cmp_No = :cmp_no`) are deterministically injected at the
+--      AST parser level via Python security guardrails, ensuring that cross-company data access is
+--      strictly impossible even under adversarial user prompting.
 --
--- 3. دليل ترجمة الجداول الأصلية (Legacy Table Mapping Dictionary):
---    - invlodhdr   --> Invoice Load Header (رؤوس الفواتير: مبيعات، مشتريات، مردودات)
---    - invloddtl   --> Invoice Load Details (أسطر وبنود الفواتير التفصيلية والكميات والأسعار)
---    - mtscustomer --> Master Customer (دليل العملاء والأرصدة والحدود الائتمانية)
---    - mtsitmmfs   --> Master Items File System (دليل الأصناف والمنتجات الرئيسي)
---    - mtsitmcatgry--> Master Item Categories (شجرة الفئات والتصنيفات)
---    - mtsitmunit  --> Master Item Units (وحدات القياس: لتر، طن، حبة، كرتونة)
---    - astsalesman --> Asset / Staff Salesmen (سجل المناديب وممثلي المبيعات)
---    - pjbranchdlv --> Project Branch Delivery / Warehouses (المستودعات والمخازن ومنافذ التوزيع)
---    - mainbranch  --> Main Branches (دليل الفروع الرئيسية والفرعية)
---    - companies   --> Multi-Tenant Directory (دليل الشركات المشتركة)
---    - crm_leads   --> CRM Prospective Leads (الفرص البيعية والعملاء المحتملين)
+-- 3. Legacy Table Mapping Dictionary:
+--    - invlodhdr   --> Invoice Load Header (Invoice headers: Sales, Purchases, Returns)
+--    - invloddtl   --> Invoice Load Details (Invoice line items, quantities, prices, taxes)
+--    - mtscustomer --> Master Customer (Customer directory, balances, credit limits, phone)
+--    - mtsitmmfs   --> Master Items File System (Master product & items catalog)
+--    - mtsitmcatgry--> Master Item Categories (Category taxonomy and product families)
+--    - mtsitmunit  --> Master Item Units (Measurement units: Liter, Ton, Piece, Carton)
+--    - astsalesman --> Asset / Staff Salesmen (Sales representatives and field agents)
+--    - pjbranchdlv --> Project Branch Delivery / Warehouses (Warehouses, fuel depots, distribution points)
+--    - mainbranch  --> Main Branches (Directory of headquarters and operating branches)
+--    - companies   --> Multi-Tenant Directory (Registered companies & legal entities)
+--    - crm_leads   --> CRM Prospective Leads (Sales opportunities and prospective clients)
 -- ====================================================================================================
 
 
 -- ====================================================================================================
 -- 1. VIEW: v_sales_invoices
--- الغرض: عرض تحليلي شامل لرؤوس الفواتير (Sales & Invoicing Transactions)
--- الجداول المرتبطة:
---   - invlodhdr (الجدول الرئيسي لرؤوس الفواتير)
---   - companies (لربط اسم الشركة القانوني بدلاً من مجرد رقم Cmp_No)
---   - mainbranch (لربط اسم الفرع العربي Brn_NmAr)
---   - mtscustomer (لربط اسم العميل Cstm_NmAr)
---   - astsalesman (لربط اسم المندوب Slm_NmAr)
---   - pjbranchdlv (لربط اسم المستودع Dlv_NmAr)
+-- Purpose: Comprehensive analytical view of invoice headers (Sales & Invoicing Transactions)
+-- Joined Tables:
+--   - invlodhdr   (Primary invoice headers table)
+--   - companies   (Maps Cmp_No to legal company names)
+--   - mainbranch  (Maps Brn_No to localized branch name Brn_NmAr)
+--   - mtscustomer (Maps Cstm_No to customer name Cstm_NmAr)
+--   - astsalesman (Maps Slm_No to sales representative Slm_NmAr)
+--   - pjbranchdlv (Maps Dlv_Stor to warehouse / depot name Dlv_NmAr)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_sales_invoices;
 CREATE VIEW v_sales_invoices AS
 SELECT 
-    -- المعرفات الأساسية للعملية
-    hdr.ID_No AS invoice_id,                      -- المعرف الفريد للفاتورة في قاعدة البيانات (Primary Key)
-    hdr.Cmp_No,                                   -- رقم الشركة (المفتاح الأساسي لعزل بيانات المستأجرين Multi-Tenancy)
-    COALESCE(cmp.company_name, 'شركة ' || hdr.Cmp_No) AS company_name,        -- الاسم العربي للشركة التابعة
-    COALESCE(cmp.company_name_en, 'Company ' || hdr.Cmp_No) AS company_name_en, -- الاسم الإنجليزي للشركة
-    hdr.Brn_No,                                   -- كود الفرع
-    brn.Brn_NmAr AS branch_name,                  -- الاسم العربي للفرع (مثل: 'الفرع الرئيسي - البنزين/سولار')
-    hdr.Doc_No AS invoice_number,                 -- رقم الفاتورة الورقي/الرسمي المطبوع
-    hdr.Doc_Dt AS invoice_date,                   -- تاريخ إصدار الفاتورة (YYYY-MM-DD)
+    -- Primary transaction identifiers
+    hdr.ID_No AS invoice_id,                      -- Unique primary key of the invoice in the database
+    hdr.Cmp_No,                                   -- Company identifier (Mandatory multi-tenancy partition key)
+    COALESCE(cmp.company_name, 'Company ' || hdr.Cmp_No) AS company_name,        -- Localized company name
+    COALESCE(cmp.company_name_en, 'Company ' || hdr.Cmp_No) AS company_name_en, -- English company name
+    hdr.Brn_No,                                   -- Branch code
+    brn.Brn_NmAr AS branch_name,                  -- Branch name (e.g. 'Main Branch - Gasoline/Solar')
+    hdr.Doc_No AS invoice_number,                 -- Official printed document number
+    hdr.Doc_Dt AS invoice_date,                   -- Invoice issuance date (YYYY-MM-DD)
 
-    -- تصنيف نوع الفاتورة المحاسبي (Doc_Ty Logic):
-    -- كود 13 = مبيعات نقدية وآجلة (Sales)
-    -- كود 14 = مردودات مبيعات (Sales Returns)
-    -- كود 1  = فواتير مشتريات (Purchases)
+    -- Accounting document type classification (Doc_Ty logic):
+    -- Code 13 = Cash & Credit Sales
+    -- Code 14 = Sales Returns
+    -- Code 1  = Purchases
     hdr.Doc_Ty AS invoice_type_id,
     CASE 
         WHEN hdr.Doc_Ty = 13 THEN 'مبيعات'
@@ -69,25 +71,25 @@ SELECT
         ELSE 'أخرى'
     END AS invoice_type_name,
 
-    -- بيانات العميل المرتبط
-    hdr.Cstm_No AS customer_id,                   -- كود العميل في دليل العملاء
-    cst.Cstm_NmAr AS customer_name,               -- الاسم التجاري/الرسمي للعميل
+    -- Customer entity data
+    hdr.Cstm_No AS customer_id,                   -- Customer account code
+    cst.Cstm_NmAr AS customer_name,               -- Localized official customer name
 
-    -- بيانات مندوب المبيعات
-    hdr.Slm_No AS salesman_id,                    -- كود المندوب المسؤول عن العملية
-    slm.Slm_NmAr AS salesman_name,                -- اسم المندوب بالكامل
+    -- Sales representative data
+    hdr.Slm_No AS salesman_id,                    -- Assigned sales representative ID
+    slm.Slm_NmAr AS salesman_name,                -- Full name of the sales representative
 
-    -- بيانات المستودع / منفذ التوزيع
-    hdr.Dlv_Stor AS warehouse_id,                 -- كود المخزن أو المستودع
-    wh.Dlv_NmAr AS warehouse_name,                -- اسم المخزن (مثل: مستودع الرياض الرئيسي / محطة 1)
+    -- Warehouse & delivery outlet data
+    hdr.Dlv_Stor AS warehouse_id,                 -- Warehouse or fuel station store code
+    wh.Dlv_NmAr AS warehouse_name,                -- Warehouse name (e.g. 'Riyadh Central Depot / Station 1')
 
-    -- القيم والعمليات المالية المحتسبة (Financial Metrics):
-    -- نستخدم COALESCE لدعم الفواتير بمختلف إصدارات إنفوساس (Tot_Sal أو TotRcpt_Amount)
-    COALESCE(hdr.Tot_Sal, hdr.TotRcpt_Amount, 0) AS total_amount,        -- إجمالي قيمة الفاتورة
-    COALESCE(hdr.Paid_Total, hdr.Pymt_Val, 0) AS paid_amount,           -- المبلغ المدفوع / المسدد نقداً أو شيكات
-    (COALESCE(hdr.Tot_Sal, hdr.TotRcpt_Amount, 0) - COALESCE(hdr.Paid_Total, hdr.Pymt_Val, 0)) AS remaining_amount, -- الرصيد المتبقي (المديونية الآجلة)
+    -- Calculated financial metrics:
+    -- Handles legacy schema variations across InfoSas versions (Tot_Sal or TotRcpt_Amount)
+    COALESCE(hdr.Tot_Sal, hdr.TotRcpt_Amount, 0) AS total_amount,        -- Total gross invoice value
+    COALESCE(hdr.Paid_Total, hdr.Pymt_Val, 0) AS paid_amount,           -- Settled amount paid in cash/cheques
+    (COALESCE(hdr.Tot_Sal, hdr.TotRcpt_Amount, 0) - COALESCE(hdr.Paid_Total, hdr.Pymt_Val, 0)) AS remaining_amount, -- Outstanding receivable balance
     
-    hdr.created_at                                -- توقيت إنشاء السجل في النظام
+    hdr.created_at                                -- System creation timestamp
 FROM invlodhdr hdr
 LEFT JOIN companies cmp ON cmp.Cmp_No = hdr.Cmp_No
 LEFT JOIN mainbranch brn ON brn.Cmp_No = hdr.Cmp_No AND brn.Brn_No = hdr.Brn_No
@@ -98,47 +100,47 @@ LEFT JOIN pjbranchdlv wh ON wh.Cmp_No = hdr.Cmp_No AND wh.Dlv_Stor = hdr.Dlv_Sto
 
 -- ====================================================================================================
 -- 2. VIEW: v_sales_invoice_items
--- الغرض: التفاصيل الدقيقة لأسطر وبنود الفواتير (Line-Item Sales & Product Movement)
--- استخدام الذكاء الاصطناعي: استعلامات "أعلى الأصناف مبيعاً"، "حجم مبيعات البنزين/السولار"، "متوسط أسعار البيع"
--- الجداول المرتبطة:
---   - invloddtl (الجدول التفصيلي لأسطر الفواتير)
---   - companies (اسم الشركة)
---   - mtsitmmfs (دليل الأصناف لاستخراج اسم الصنف العربي والإنجليزي)
---   - mtsitmcatgry (التصنيف والفئة الرئيسية للصنف)
---   - mtsitmunit (وحدة الصنف: لتر، طن، متر، كرتونة)
---   - pjbranchdlv (المستودع الذي خرجت منه البضاعة)
+-- Purpose: Detailed line-item breakdown for invoices (Line-Item Sales & Product Movement)
+-- AI Use Cases: "Top-selling products", "Fuel sales volume (Gasoline / Diesel)", "Average unit pricing"
+-- Joined Tables:
+--   - invloddtl   (Detailed invoice lines table)
+--   - companies   (Company identity)
+--   - mtsitmmfs   (Master item catalog for localized Arabic/English product descriptions)
+--   - mtsitmcatgry(Product category taxonomy)
+--   - mtsitmunit  (Unit of measure: Liter, Ton, Meter, Carton)
+--   - pjbranchdlv (Warehouse / depot where goods were dispensed)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_sales_invoice_items;
 CREATE VIEW v_sales_invoice_items AS
 SELECT 
-    dtl.ID_No AS line_id,                         -- المعرف الفريد للسطر
-    dtl.Cmp_No,                                   -- رقم الشركة
-    COALESCE(cmp.company_name, 'شركة ' || dtl.Cmp_No) AS company_name,        -- اسم الشركة
-    COALESCE(cmp.company_name_en, 'Company ' || dtl.Cmp_No) AS company_name_en,
-    dtl.Brn_No,                                   -- رقم الفرع
-    dtl.Doc_No AS invoice_number,                 -- رقم الفاتورة الأصلية (لربط السطر برأس الفاتورة)
-    dtl.Doc_Dt AS invoice_date,                   -- تاريخ العملية
-    dtl.Doc_Ty AS invoice_type_id,                -- كود نوع الفاتورة (13: مبيعات، 14: مردود، إلخ)
+    dtl.ID_No AS line_id,                         -- Unique primary key of the line item
+    dtl.Cmp_No,                                   -- Company identifier
+    COALESCE(cmp.company_name, 'Company ' || dtl.Cmp_No) AS company_name,        -- Localized company name
+    COALESCE(cmp.company_name_en, 'Company ' || dtl.Cmp_No) AS company_name_en, -- English company name
+    dtl.Brn_No,                                   -- Branch code
+    dtl.Doc_No AS invoice_number,                 -- Invoice number linking item to header
+    dtl.Doc_Dt AS invoice_date,                   -- Transaction date
+    dtl.Doc_Ty AS invoice_type_id,                -- Document type code (13: Sales, 14: Returns, etc.)
 
-    -- بيانات الصنف وتصنيفه
-    dtl.Itm_No AS item_code,                      -- الكود المحاسبي للصنف
-    itm.Itm_NmAr AS item_name,                    -- الاسم العربي للصنف (مثل: 'بنزين 92', 'سولار', 'زيت محرك 5W30')
-    itm.Itm_NmEn AS item_name_en,                 -- الاسم الإنجليزي للصنف
-    cat.Itm_NmAr AS category_name,                -- التصنيف العائلي للصنف (Category)
+    -- Product information and classification
+    dtl.Itm_No AS item_code,                      -- Accounting item code
+    itm.Itm_NmAr AS item_name,                    -- Localized product name (e.g. 'Benzene 92', 'Diesel', 'Engine Oil 5W30')
+    itm.Itm_NmEn AS item_name_en,                 -- English product name
+    cat.Itm_NmAr AS category_name,                -- Category / family classification
     
-    -- بيانات وحدة القياس والكميات
-    dtl.Unit_No AS unit_id,                       -- كود وحدة القياس
-    unt.Unit_NmAr AS unit_name,                   -- اسم الوحدة (لتر، طن، برميل، عبوة)
-    dtl.Qty AS quantity,                          -- الكمية المباعة
+    -- Unit of measure and quantity
+    dtl.Unit_No AS unit_id,                       -- Unit of measure ID
+    unt.Unit_NmAr AS unit_name,                   -- Localized unit name (Liter, Ton, Barrel, Package)
+    dtl.Qty AS quantity,                          -- Quantity sold or returned
 
-    -- الأسعار والإجماليات والضرائب
-    COALESCE(dtl.Itm_Sal, dtl.Itm_Pur, 0) AS unit_price, -- سعر بيع الوحدة الواحدة
-    COALESCE(dtl.Titm_Sal, dtl.Qty * dtl.Itm_Sal, dtl.Titm_Pur, 0) AS line_total, -- إجمالي قيمة السطر بعد ضرب الكمية بالسعر
-    COALESCE(dtl.Taxv_ExtraDtl, 0) AS tax_amount, -- ضريبة القيمة المضافة المحسوبة على السطر (VAT)
+    -- Pricing, financial lines, and taxes
+    COALESCE(dtl.Itm_Sal, dtl.Itm_Pur, 0) AS unit_price, -- Unit sale price
+    COALESCE(dtl.Titm_Sal, dtl.Qty * dtl.Itm_Sal, dtl.Titm_Pur, 0) AS line_total, -- Net line total (Quantity * Unit Price)
+    COALESCE(dtl.Taxv_ExtraDtl, 0) AS tax_amount, -- Calculated Value-Added Tax (VAT) on line
 
-    -- المستودع التابع له الصرف
-    dtl.Dlv_Stor AS warehouse_id,                 -- كود المخزن المنصرف منه الصنف
-    wh.Dlv_NmAr AS warehouse_name                 -- اسم المستودع
+    -- Dispensing warehouse
+    dtl.Dlv_Stor AS warehouse_id,                 -- Warehouse store ID
+    wh.Dlv_NmAr AS warehouse_name                 -- Warehouse name
 FROM invloddtl dtl
 LEFT JOIN companies cmp ON cmp.Cmp_No = dtl.Cmp_No
 LEFT JOIN mtsitmmfs itm ON itm.Cmp_No = dtl.Cmp_No AND itm.Itm_No = dtl.Itm_No
@@ -149,27 +151,27 @@ LEFT JOIN pjbranchdlv wh ON wh.Cmp_No = dtl.Cmp_No AND wh.Dlv_Stor = dtl.Dlv_Sto
 
 -- ====================================================================================================
 -- 3. VIEW: v_inventory_stock
--- الغرض: الدليل الموحد لبطاقات الأصناف والكتالوج المخزني (Product Master & Inventory Catalog)
--- استخدام الذكاء الاصطناعي: الاستعلام عن الأصناف المسجلة، الأصناف النشطة، التصنيفات، والمورد الافتراضي
--- الجداول المرتبطة:
---   - mtsitmmfs (دليل الأصناف والمخزون الرئيسي)
---   - companies (اسم الشركة التابع لها الصنف)
---   - mtsitmcatgry (التصنيف العام والشجرة المخزنية)
---   - mtsitmunit (الوحدة الأساسية للصنف)
+-- Purpose: Unified master catalog for product definitions and inventory status (Product Master & Inventory Catalog)
+-- AI Use Cases: Catalog inventory inquiries, active vs archived items, product categories, default suppliers
+-- Joined Tables:
+--   - mtsitmmfs   (Master item catalog and inventory definitions)
+--   - companies   (Tenant ownership)
+--   - mtsitmcatgry(Taxonomy tree and product families)
+--   - mtsitmunit  (Primary base unit of measure)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_inventory_stock;
 CREATE VIEW v_inventory_stock AS
 SELECT 
-    itm.ID_No AS item_id,                         -- الرقم التعريفي للصنف
-    itm.Cmp_No,                                   -- رقم الشركة
-    COALESCE(cmp.company_name, 'شركة ' || itm.Cmp_No) AS company_name, -- اسم الشركة
-    itm.Itm_No AS item_code,                      -- كود الصنف التجاري
-    itm.Itm_NmAr AS item_name,                    -- اسم الصنف بالعربية
-    itm.Itm_NmEn AS item_name_en,                 -- اسم الصنف بالإنجليزية
-    cat.Itm_NmAr AS category_name,                -- اسم التصنيف / الفئة
-    unt.Unit_NmAr AS primary_unit,                -- وحدة القياس الرئيسية
-    itm.Itm_Active AS is_active,                  -- حالة الصنف (1: نشط ويُباع، 0: موقف أو أرشيف)
-    itm.Sup_No AS default_supplier_id             -- كود المورد المعتمد للصنف
+    itm.ID_No AS item_id,                         -- Unique item record identifier
+    itm.Cmp_No,                                   -- Company identifier
+    COALESCE(cmp.company_name, 'Company ' || itm.Cmp_No) AS company_name, -- Company name
+    itm.Itm_No AS item_code,                      -- SKU / commercial item code
+    itm.Itm_NmAr AS item_name,                    -- Localized Arabic product name
+    itm.Itm_NmEn AS item_name_en,                 -- English product name
+    cat.Itm_NmAr AS category_name,                -- Category / product family name
+    unt.Unit_NmAr AS primary_unit,                -- Base measurement unit name
+    itm.Itm_Active AS is_active,                  -- Item active flag (1: Active for sale, 0: Discontinued/Archived)
+    itm.Sup_No AS default_supplier_id             -- Default authorized supplier code
 FROM mtsitmmfs itm
 LEFT JOIN companies cmp ON cmp.Cmp_No = itm.Cmp_No
 LEFT JOIN mtsitmcatgry cat ON cat.Cmp_No = itm.Cmp_No AND cat.Itm_No = itm.Itm_Parnt
@@ -178,29 +180,29 @@ LEFT JOIN mtsitmunit unt ON unt.Unit_No = itm.Unit_No;
 
 -- ====================================================================================================
 -- 4. VIEW: v_customers_overview
--- الغرض: دليل العملاء، الحدود الائتمانية وفترات السداد (Customer Directory, Credit & Balances)
--- استخدام الذكاء الاصطناعي: الاستعلام عن بيانات العملاء، أكبر العملاء ائتماناً، مندوب كل عميل، أرقام التواصل
--- الجداول المرتبطة:
---   - mtscustomer (جدول العملاء الرئيسي)
---   - companies (اسم الشركة)
---   - astsalesman (المندوب المسؤول المخصص للعميل)
+-- Purpose: Customer directory, credit terms, and debt limits (Customer Directory, Credit & Balances)
+-- AI Use Cases: Customer profile lookups, top debtor accounts, assigned salesmen, contact coordinates
+-- Joined Tables:
+--   - mtscustomer (Primary customer master table)
+--   - companies   (Tenant ownership)
+--   - astsalesman (Designated account manager / sales representative)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_customers_overview;
 CREATE VIEW v_customers_overview AS
 SELECT 
-    cst.ID_No AS customer_id,                     -- المعرف الفريد للعميل
-    cst.Cmp_No,                                   -- رقم الشركة
-    COALESCE(cmp.company_name, 'شركة ' || cst.Cmp_No) AS company_name, -- اسم الشركة
-    cst.Brn_No,                                   -- كود الفرع المسجل عليه العميل
-    cst.Cstm_No AS customer_code,                 -- كود العميل المحاسبي
-    cst.Cstm_NmAr AS customer_name,               -- الاسم التجاري للعميل
-    cst.Cstm_NmEn AS customer_name_en,            -- الاسم الإنجليزي للعميل
-    cst.Cstm_Tel AS telephone,                    -- رقم الهاتف / الجوال المعتمد للتواصل
-    cst.Credit_Value AS credit_limit,             -- سقف الائتمان المسموح به للعميل (Credit Limit)
-    cst.Credit_Days AS credit_days,               -- مهلة السداد المسموح بها بالأيام (Grace Period Days)
-    slm.Slm_NmAr AS assigned_salesman,            -- اسم المندوب المشرف على حساب العميل
-    cst.Cstm_Active AS is_active,                 -- حالة الحساب (1: مفعل، 0: مغلق/مجمد)
-    cst.created_at                                -- تاريخ تسجيل العميل في النظام
+    cst.ID_No AS customer_id,                     -- Unique internal customer ID
+    cst.Cmp_No,                                   -- Company identifier
+    COALESCE(cmp.company_name, 'Company ' || cst.Cmp_No) AS company_name, -- Company name
+    cst.Brn_No,                                   -- Assigned home branch code
+    cst.Cstm_No AS customer_code,                 -- Accounting customer code
+    cst.Cstm_NmAr AS customer_name,               -- Localized commercial customer name
+    cst.Cstm_NmEn AS customer_name_en,            -- English customer name
+    cst.Cstm_Tel AS telephone,                    -- Primary phone / contact number
+    cst.Credit_Value AS credit_limit,             -- Authorized credit limit ceiling
+    cst.Credit_Days AS credit_days,               -- Permitted grace period in days for invoice settlement
+    slm.Slm_NmAr AS assigned_salesman,            -- Name of assigned sales representative
+    cst.Cstm_Active AS is_active,                 -- Account status (1: Active, 0: Inactive / Suspended)
+    cst.created_at                                -- System registration timestamp
 FROM mtscustomer cst
 LEFT JOIN companies cmp ON cmp.Cmp_No = cst.Cmp_No
 LEFT JOIN astsalesman slm ON slm.Cmp_No = cst.Cmp_No AND slm.Slm_No = cst.Slm_No;
@@ -208,25 +210,25 @@ LEFT JOIN astsalesman slm ON slm.Cmp_No = cst.Cmp_No AND slm.Slm_No = cst.Slm_No
 
 -- ====================================================================================================
 -- 5. VIEW: v_salesmen_overview
--- الغرض: أداء فريق المبيعات والمناديب المستهدف والفروع (Sales Representatives & Targets)
--- استخدام الذكاء الاصطناعي: "من هم مناديب فرع كذا؟"، "أهداف المبيعات المحددة للمناديب"، "حدود الشيكات النقدية"
--- الجداول المرتبطة:
---   - astsalesman (دليل الموظفين والمناديب)
---   - companies (اسم الشركة)
---   - mainbranch (الفرع المخصص له المندوب)
+-- Purpose: Sales team performance directory, targets, and branch assignments (Sales Representatives & Targets)
+-- AI Use Cases: Sales reps per branch, monthly/annual sales quotas, cheque collection limits
+-- Joined Tables:
+--   - astsalesman (Master salesmen and staff directory)
+--   - companies   (Tenant ownership)
+--   - mainbranch  (Designated operating branch)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_salesmen_overview;
 CREATE VIEW v_salesmen_overview AS
 SELECT 
-    slm.ID_No AS salesman_id,                     -- كود المندوب الداخلي
-    slm.Cmp_No,                                   -- رقم الشركة
-    COALESCE(cmp.company_name, 'شركة ' || slm.Cmp_No) AS company_name, -- اسم الشركة
-    slm.Brn_No,                                   -- رقم الفرع التابع له
-    slm.Slm_No AS salesman_code,                  -- كود المندوب في النظام المحاسبي
-    slm.Slm_NmAr AS salesman_name,                -- اسم المندوب بالكامل
-    slm.Target AS sales_target,                   -- المستهدف البيعي الشهري/السنوي (Sales Quota/Target)
-    slm.TCashCheqe AS cash_cheque_limit,          -- الحد الأقصى لتحصيل الشيكات والنقدية المسموح به للمندوب
-    brn.Brn_NmAr AS branch_name                   -- اسم الفرع التابع له المندوب
+    slm.ID_No AS salesman_id,                     -- Internal salesman sequence ID
+    slm.Cmp_No,                                   -- Company identifier
+    COALESCE(cmp.company_name, 'Company ' || slm.Cmp_No) AS company_name, -- Company name
+    slm.Brn_No,                                   -- Branch code assignment
+    slm.Slm_No AS salesman_code,                  -- Accounting salesman code
+    slm.Slm_NmAr AS salesman_name,                -- Full name of sales representative
+    slm.Target AS sales_target,                   -- Monthly or annual sales target quota
+    slm.TCashCheqe AS cash_cheque_limit,          -- Maximum allowed cash/cheque collection ceiling
+    brn.Brn_NmAr AS branch_name                   -- Localized branch name
 FROM astsalesman slm
 LEFT JOIN companies cmp ON cmp.Cmp_No = slm.Cmp_No
 LEFT JOIN mainbranch brn ON brn.Cmp_No = slm.Cmp_No AND brn.Brn_No = slm.Brn_No;
@@ -234,36 +236,37 @@ LEFT JOIN mainbranch brn ON brn.Cmp_No = slm.Cmp_No AND brn.Brn_No = slm.Brn_No;
 
 -- ====================================================================================================
 -- 6. VIEW: v_crm_leads_overview
--- الغرض: إدارة الفرص البيعية والعملاء المتوقعين (CRM Leads & Opportunities Pipeline)
--- استخدام الذكاء الاصطناعي: متابعة الصفقات المتوقعة، قيمة الفرص المقدرة، تاريخ آخر تواصل، والمندوب المسؤول
--- الجداول المرتبطة:
---   - crm_leads (جدول الفرص المحتملة للـ CRM)
---   - companies (اسم الشركة)
---   - astsalesman (المندوب المكلف بمتابعة العميل المحتمل)
+-- Purpose: Sales pipeline tracking and prospective opportunities (CRM Leads & Opportunities Pipeline)
+-- AI Use Cases: Deal pipeline monitoring, estimated deal valuation, last follow-up contact, assigned closer
+-- Joined Tables:
+--   - crm_leads   (CRM prospective opportunities table)
+--   - companies   (Tenant ownership)
+--   - astsalesman (Sales representative in charge of closing)
 -- ====================================================================================================
 DROP VIEW IF EXISTS v_crm_leads_overview;
 CREATE VIEW v_crm_leads_overview AS
 SELECT 
-    lead.id AS lead_id,                           -- معرف الفرصة البيعية
-    lead.Cmp_No,                                  -- رقم الشركة
-    COALESCE(cmp.company_name, 'شركة ' || lead.Cmp_No) AS company_name, -- اسم الشركة
-    lead.Brn_No,                                  -- رقم الفرع
-    lead.Lead_No AS lead_number,                  -- كود العميل المحتمل
-    lead.Lead_NmAr AS lead_name,                  -- اسم العميل أو اسم المؤسسة المستهدفة
-    lead.Lead_Value AS estimated_value,           -- القيمة التقديرية المتوقعة للصفقة (Deal Valuation)
-    lead.Lead_Tel AS phone,                       -- هاتف العميل المحتمل
-    lead.Lead_Email AS email,                     -- البريد الإلكتروني
-    lead.Last_contact AS last_contact_date,       -- تاريخ آخر مكالمة أو اجتماع تواصل معه
-    slm.Slm_NmAr AS assigned_salesman,            -- اسم المندوب المكلف بالإغلاق والمتابعة
-    lead.created_at                               -- تاريخ فتح الفرصة البيعية
+    lead.id AS lead_id,                           -- Unique opportunity ID
+    lead.Cmp_No,                                  -- Company identifier
+    COALESCE(cmp.company_name, 'Company ' || lead.Cmp_No) AS company_name, -- Company name
+    lead.Brn_No,                                  -- Branch code
+    lead.Lead_No AS lead_number,                  -- Prospective lead identifier
+    lead.Lead_NmAr AS lead_name,                  -- Contact or target institution name
+    lead.Lead_Value AS estimated_value,           -- Expected deal valuation amount
+    lead.Lead_Tel AS phone,                       -- Lead contact phone number
+    lead.Lead_Email AS email,                     -- Lead contact email address
+    lead.Last_contact AS last_contact_date,       -- Timestamp of last communication or meeting
+    slm.Slm_NmAr AS assigned_salesman,            -- Name of assigned sales representative
+    lead.created_at                               -- Opportunity creation timestamp
 FROM crm_leads lead
 LEFT JOIN companies cmp ON cmp.Cmp_No = lead.Cmp_No
 LEFT JOIN astsalesman slm ON slm.Cmp_No = lead.Cmp_No AND slm.Slm_No = lead.Slm_No;
 
 
 -- ====================================================================================================
--- 7. توصيات الفهارس لقاعدة بيانات MySQL/MariaDB في بيئة الإنتاج (Production Indexes Recommendations)
--- للحصول على أقصى أداء واستجابة أقل من 0.05 ثانية حتى مع ملايين الفواتير، نوصي بتطبيق الفهارس المركبة الآتية:
+-- 7. Production Database Index Recommendations (MySQL / MariaDB / PostgreSQL / SQLite)
+-- For maximum query throughput (< 0.05s response latency) even with millions of invoices,
+-- the following composite indexes are highly recommended on the production storage engine:
 -- ====================================================================================================
 -- CREATE INDEX idx_invlodhdr_tenant_date ON invlodhdr (Cmp_No, Brn_No, Doc_Dt, Doc_Ty);
 -- CREATE INDEX idx_invlodhdr_customer ON invlodhdr (Cmp_No, Cstm_No, Doc_Dt);

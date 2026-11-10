@@ -2,7 +2,7 @@
 # Saudi Arabic & Multi-Dialect Stress Testing Suite
 # Path: tests/test_saudi_arabic_suite.py
 # Purpose: Comprehensive test suite evaluating the Text-to-SQL copilot under:
-#          1. Colloquial Saudi & Gulf phrasing ("وش", "عطني", "أبي", "لستة", "تكفى", "حساب الآجل")
+#          1. Colloquial Saudi & Gulf dialect phrasing (e.g., regional terms for queries, requests, and prompts)
 #          2. Complex multi-condition financial & inventory analytical inquiries
 #          3. AST Security Guardrails under colloquial prompt injection / table leaks
 #          4. Active Concurrency Limiters (Semaphore=3) under concurrent thread load
