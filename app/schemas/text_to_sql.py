@@ -26,6 +26,9 @@ class AskQuestionRequest(BaseModel):
     
     # include_chart: Flag indicating whether to generate interactive Chart.js / ApexCharts specs
     include_chart: bool = Field(True, description="Whether to generate chart visualization specs")
+    
+    # chart_type: Explicit visualization override ('bar', 'line', 'pie', 'doughnut')
+    chart_type: Optional[str] = Field(None, description="Explicit chart type preference ('bar', 'line', 'pie', 'doughnut')")
 
 
 class ChartData(BaseModel):

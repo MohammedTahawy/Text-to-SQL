@@ -33,3 +33,12 @@ Thumbs.db
 # SQLite WAL and shared memory files (Keep primary demo_enterprise.db tracked)
 *.db-shm
 *.db-wal
+
+# Real Production Database files & client dumps (Strictly Forbidden from git)
+infosas*.db
+*production*.db
+test_*.db
+*.zip
+*.tar.gz
+*.sql.gz
+*.dump

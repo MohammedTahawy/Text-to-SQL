@@ -128,7 +128,8 @@ SECURITY DIRECTIVES:
             question=request.question,
             rows=rows,
             language=request.language,
-            include_chart=request.include_chart
+            include_chart=request.include_chart,
+            chart_type=request.chart_type
         )
 
         return AskQuestionResponse(
@@ -145,15 +146,44 @@ SECURITY DIRECTIVES:
         question: str,
         rows: list,
         language: str = "ar",
-        include_chart: bool = True
+        include_chart: bool = True,
+        chart_type: Optional[str] = None
     ) -> tuple[str, Optional[ChartData]]:
         """
         Formulates a concise executive summary and visualization specification
-        based on query result rows.
+        based on query result rows, respecting user-requested chart overrides.
         """
         if not rows:
             msg = "لم يتم العثور على أي بيانات مطابقة لاستفسارك." if language == "ar" else "No matching data found for your query."
             return msg, None
+
+        # Detect user-requested chart type override from query text or explicit request
+        q_lower = question.lower()
+        forced_chart = (chart_type or "").lower().strip()
+        if not forced_chart:
+            if "pie" in q_lower or "دائري" in q_lower or "دائرية" in q_lower or "فطيرة" in q_lower:
+                forced_chart = "pie"
+            elif "donut" in q_lower or "دونت" in q_lower or "doughnut" in q_lower:
+                forced_chart = "doughnut"
+            elif "line" in q_lower or "خطي" in q_lower or "خط " in q_lower:
+                forced_chart = "line"
+            elif "bar" in q_lower or "أعمدة" in q_lower or "عمودي" in q_lower or "شريطي" in q_lower:
+                forced_chart = "bar"
+            elif "area" in q_lower or "مساحي" in q_lower:
+                forced_chart = "area"
+
+        chart_type_directive = ""
+        if forced_chart:
+            chart_type_directive = f"""
+CRITICAL USER CHART OVERRIDE:
+The user explicitly specified a '{forced_chart}' chart in their request.
+You MUST set "has_chart": true and "chart_type": "{forced_chart}". Do not use any other chart type!
+"""
+        else:
+            chart_type_directive = """
+CHART TYPE SELECTION:
+If the user specifies a chart type in their question (e.g. 'pie', 'pie chart', 'دائري', 'bar', 'عمودي', 'line', 'خطي'), you MUST strictly respect it. Otherwise, choose the most intuitive type ('bar', 'line', 'pie', 'doughnut').
+"""
 
         # Sample top 15 rows for high-speed, cost-effective LLM narrative and visual chart
         sample_limit = 15
@@ -177,13 +207,14 @@ CRITICAL CHART & LABEL RULES:
 2. SAMPLE TRANSPARENCY: Since {len(preview_rows)} sample rows were visualized, your narrative must explicitly note that the visual chart/breakdown highlights the top {len(preview_rows)} records, while the complete table contains all {total_matched_rows} records.
 3. Chart "labels" MUST ALWAYS be human-readable names (e.g. item names, customer names, salesman names), NEVER numerical IDs or codes!
 4. If financial/sales values exist (e.g. line_total, total_amount, remaining_amount), always calculate and include the overall total sum in the executive explanation in {'Arabic' if language == 'ar' else 'English'} (e.g. "بلغ إجمالي المبيعات X جنيه").
+{chart_type_directive}
 
 Respond with a JSON object in this format:
 {{
   "explanation": "Executive summary in {'Arabic' if language == 'ar' else 'English'} stating total records ({total_matched_rows}) and highlighting findings from top {len(preview_rows)} records.",
   "has_chart": true or false,
   "chart": {{
-     "chart_type": "bar" | "line" | "pie",
+     "chart_type": "bar" | "line" | "pie" | "doughnut",
      "title": "Chart Title",
      "labels": ["Human Name 1", "Human Name 2", ...],
      "datasets": [
@@ -217,8 +248,9 @@ Respond with a JSON object in this format:
             chart_obj = None
             if include_chart and parsed.get("has_chart") and parsed.get("chart"):
                 c = parsed["chart"]
+                final_chart_type = forced_chart if forced_chart else c.get("chart_type", "bar")
                 chart_obj = ChartData(
-                    chart_type=c.get("chart_type", "bar"),
+                    chart_type=final_chart_type,
                     title=c.get("title", question),
                     labels=c.get("labels", []),
                     datasets=c.get("datasets", [])

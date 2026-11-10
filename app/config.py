@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     
     # AI_SERVICE_API_KEY: Internal shared secret token. Requests originating from Laravel
     # must include this token in the 'X-AI-API-KEY' HTTP header to prevent unauthorized access.
-    AI_SERVICE_API_KEY: str = "infosas_secret_ai_token_change_in_production"
+    # Loaded strictly from environment variable or .env file (no secret hardcoded in code)
+    AI_SERVICE_API_KEY: Optional[str] = None
 
     # --- 2. LLM Provider Configurations ---
     # DEFAULT_LLM_PROVIDER: Active AI provider ('groq', 'openai', or 'gemini')
@@ -65,22 +66,22 @@ class Settings(BaseSettings):
     # --- 3. Database Configurations ---
     # DB_TYPE: 'sqlite' for immediate out-of-the-box local testing, 'mysql' for production ERP
     DB_TYPE: str = "sqlite"
-    # Local SQLite database filename
-    SQLITE_PATH: str = "infosas_erp.db"
+    # Local SQLite database filename (loaded from .env, defaults to generic demo_enterprise.db)
+    SQLITE_PATH: Optional[str] = "demo_enterprise.db"
     
-    # Production MySQL Database Settings (active when DB_TYPE='mysql')
+    # Production MySQL Database Settings (loaded strictly from .env when DB_TYPE='mysql')
     DB_HOST: str = "127.0.0.1"          # MySQL server host / IP
     DB_PORT: int = 3306                 # Default MySQL port
-    DB_NAME: str = "infosas_erp"        # InfoSas ERP database name
-    DB_USER: str = "infosas_readonly"   # Read-only user for strict security
-    DB_PASSWORD: str = "readonly_strong_pass"
+    DB_NAME: Optional[str] = None       # Database name (from .env)
+    DB_USER: Optional[str] = None       # Database user (from .env)
+    DB_PASSWORD: Optional[str] = None   # Database password (from .env)
     DB_POOL_SIZE: int = 10              # Persistent connection pool size
     DB_MAX_OVERFLOW: int = 20           # Maximum overflow connections during peak spikes
 
     # --- 4. WhatsApp Business Cloud API Settings ---
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None  # Registered Phone Number ID in Meta Developer portal
     WHATSAPP_ACCESS_TOKEN: Optional[str] = None     # Permanent System User Bearer Token from Meta
-    WHATSAPP_VERIFY_TOKEN: str = "infosas_webhook_verify_token_2026"  # Verification token for webhook handshake
+    WHATSAPP_VERIFY_TOKEN: Optional[str] = None     # Verification token for webhook handshake
 
     # --- 5. Redis Cache Settings ---
     # Used for semantic caching of frequently asked SQL queries to reduce API costs to $0
@@ -91,15 +92,24 @@ class Settings(BaseSettings):
         """
         Dynamic property that constructs the appropriate SQLAlchemy database URI
         based on the selected DB_TYPE (SQLite vs MySQL via PyMySQL).
+        All sensitive credentials, names, and paths are read dynamically from .env.
         """
-        # If SQLite is selected, resolve absolute path to infosas_erp.db
         if self.DB_TYPE.lower() == "sqlite":
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            db_path = os.path.join(base_dir, self.SQLITE_PATH)
+            sqlite_file = self.SQLITE_PATH or "demo_enterprise.db"
+            if os.path.isabs(sqlite_file):
+                db_path = sqlite_file
+            else:
+                db_path = os.path.join(base_dir, sqlite_file)
             return f"sqlite:///{db_path}"
         
-        # If MySQL is selected, return PyMySQL connection string with UTF-8 charset
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
+        # If MySQL is selected, return PyMySQL connection string
+        user = self.DB_USER or ""
+        pwd = f":{self.DB_PASSWORD}" if self.DB_PASSWORD else ""
+        host = self.DB_HOST or "127.0.0.1"
+        port = self.DB_PORT or 3306
+        db = self.DB_NAME or ""
+        return f"mysql+pymysql://{user}{pwd}@{host}:{port}/{db}?charset=utf8mb4"
 
     # Pydantic configuration: loads variables from .env file with UTF-8 encoding
     model_config = SettingsConfigDict(

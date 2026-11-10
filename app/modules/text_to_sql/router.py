@@ -1,10 +1,12 @@
 # ==============================================================================
 # Natural Language Reports API Router
 # Path: app/modules/text_to_sql/router.py
-# Purpose: Exposes HTTP REST endpoints for the Enterprise ERP ERP frontend:
+# Purpose: Exposes HTTP REST endpoints for the InfoSas ERP frontend:
 #          1. POST /api/v1/reports/ask       -> Process text-based analytical queries.
 #          2. POST /api/v1/reports/ask-voice -> Process voice queries directly from browser/mobile.
 # ==============================================================================
+
+from typing import Optional
 
 # FastAPI router and request parameter utilities
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
@@ -76,9 +78,11 @@ async def ask_erp_question(
     summary="Ask ERP question via Voice Note (Whisper Audio) and get table + chart data"
 )
 async def ask_erp_question_voice(
-    audio: UploadFile = File(..., description="Audio file (mp3, wav, ogg, m4a)"),
+    audio: Optional[UploadFile] = File(None, description="Audio file (mp3, wav, ogg, m4a, webm)"),
+    file: Optional[UploadFile] = File(None, description="Alternative alias for audio upload file"),
     language: str = Form("ar", description="Preferred response language ('ar' or 'en')"),
     include_chart: bool = Form(True, description="Whether to generate chart visualization specs"),
+    chart_type: Optional[str] = Form(None, description="Optional explicit chart type preference ('bar', 'pie', 'line', 'doughnut')"),
     _auth=Depends(verify_api_key),
     tenant=Depends(get_tenant_context)
 ):
@@ -88,14 +92,21 @@ async def ask_erp_question_voice(
     transcribes speech into Arabic/English text via Whisper Large v3 Turbo,
     and forwards the transcribed prompt to the Text-to-SQL pipeline.
     """
+    upload = audio or file
+    if not upload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No audio payload provided. Send audio via 'audio' or 'file' form field."
+        )
+
     try:
         # Read incoming audio bytes
-        audio_bytes = await audio.read()
+        audio_bytes = await upload.read()
         
         # Transcribe audio to text
         transcribed_text = transcribe_audio_file(
             file_obj=audio_bytes,
-            filename=audio.filename or "voice_note.mp3",
+            filename=upload.filename or "voice_note.webm",
             language=language
         )
 
@@ -109,7 +120,8 @@ async def ask_erp_question_voice(
         req = AskQuestionRequest(
             question=transcribed_text,
             language=language,
-            include_chart=include_chart
+            include_chart=include_chart,
+            chart_type=chart_type
         )
 
         # Process through Text-to-SQL engine

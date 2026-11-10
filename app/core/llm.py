@@ -131,11 +131,42 @@ class LLMClient:
                     return content.strip()
                 except Exception as e:
                     err_str = str(e).lower()
-                    # Resilient backoff: Groq TPM / RPM 429 RateLimitError
+                    # Resilient backoff: Groq / OpenAI TPM & RPM 429 RateLimitError
                     if "429" in err_str or "rate limit" in err_str:
                         if attempt < max_retries:
-                            match = re.search(r"try again in ([\d\.]+)s", str(e), re.IGNORECASE)
-                            wait_sec = float(match.group(1)) + 1.0 if match else (attempt + 1) * 6.0
+                            wait_sec = None
+                            # 1. Try extracting retry-after from HTTP response headers if available
+                            if hasattr(e, "response") and e.response and hasattr(e.response, "headers"):
+                                retry_hdr = e.response.headers.get("retry-after")
+                                if retry_hdr:
+                                    try:
+                                        wait_sec = float(retry_hdr) + 0.5
+                                    except (ValueError, TypeError):
+                                        pass
+
+                            # 2. Extract seconds from error messages such as:
+                            #    - "try again after 14.43s" or "try again after 15 seconds"
+                            #    - "try again in 14.43s" or "try again in 15 seconds"
+                            #    - "retry after 10s" or "retry in 10 seconds"
+                            #    - "Please try again after 12s"
+                            if wait_sec is None:
+                                match = re.search(
+                                    r"(?:try again after|try again in|retry after|retry in|in|after)\s*([\d\.]+)\s*(s(?:ec(?:onds?)?)?|ms|m(?:in(?:utes?)?)?)?",
+                                    str(e),
+                                    re.IGNORECASE
+                                )
+                                if match:
+                                    val = float(match.group(1))
+                                    unit = (match.group(2) or "s").lower()
+                                    if unit.startswith("ms"):
+                                        wait_sec = (val / 1000.0) + 0.5
+                                    elif unit.startswith("m") and not unit.startswith("ms"):
+                                        wait_sec = (val * 60.0) + 1.0
+                                    else:
+                                        wait_sec = val + 1.0
+                                else:
+                                    wait_sec = (attempt + 1) * 6.0
+
                             logger.warning(f"Groq Rate limit (429) hit. Waiting {wait_sec:.2f}s before retry {attempt + 1}/{max_retries}...")
                             time.sleep(wait_sec)
                             continue

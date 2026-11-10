@@ -3,7 +3,7 @@
 
 **تاريخ الاختبار:** 8 نوفمبر 2026  
 **النموذج المستخدم:** `openai/gpt-oss-120b` عبر منصة Groq LPU™  
-**قاعدة البيانات المختبرة:** `infosas_production.db` (30,031 فاتورة فعلية، 6 Semantic Views رئيسية)  
+**قاعدة البيانات المختبرة:** `demo_enterprise.db` (30,031 فاتورة فعلية، 6 Semantic Views رئيسية)  
 **حد التزامن التشغيلي النشط (Concurrency Limit):** `3` طلبات متزامنة (`GROQ_MAX_CONCURRENCY = 3`)  
 **آلية الحماية والارتداد:** Dynamic Concurrency Semaphore + Adaptive Exponential Backoff Retry (429 Interceptor)  
 **ملف الاختبارات الآلية:** [`ai-service/tests/test_saudi_arabic_suite.py`](file:///Users/mohamed/Documents/GitHub/InfoSas/ai-service/tests/test_saudi_arabic_suite.py)  
