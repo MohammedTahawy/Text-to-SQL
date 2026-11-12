@@ -229,11 +229,18 @@ Respond with a JSON object in this format:
         ]
 
         try:
-            raw_response = llm_client.chat_completion(
-                messages=messages,
-                temperature=0.2,
-                response_format={"type": "json_object"}
-            )
+            try:
+                raw_response = llm_client.chat_completion(
+                    messages=messages,
+                    temperature=0.2,
+                    response_format={"type": "json_object"}
+                )
+            except Exception as json_fmt_err:
+                logger.warning(f"Strict json_object mode failed ({json_fmt_err}), retrying completion with standard formatting...")
+                raw_response = llm_client.chat_completion(
+                    messages=messages,
+                    temperature=0.2
+                )
             cleaned_json = clean_json_text(raw_response)
             parsed = json.loads(cleaned_json)
             

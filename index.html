@@ -796,28 +796,20 @@
       <div class="company-selector-box">
         <span class="selector-label">Company:</span>
         <select id="companySelect" class="company-select" onchange="onCompanyChange()">
-          <optgroup label="⚡ شركات بنشاط فواتير فعلي (Active Transactions)">
-            <option value="1201" selected>🏢 شركة النور للطاقة والوقود (Cmp 1201 - 27,795 فواتير)</option>
-            <option value="601">🏢 الشركة الهندسية للتجارة والتوريدات (Cmp 601 - 2,123 فواتير)</option>
-            <option value="2001">🏢 الشركة الدولية للملاحة واللوجستيات (Cmp 2001 - 23 فواتير)</option>
-            <option value="57001">🏢 المؤسسة العربية للأعمال والتوريد (Cmp 57001 - 55 فواتير)</option>
-            <option value="1401">🏢 شركة اللبيني التجارية (Cmp 1401 - 16 فواتير)</option>
-            <option value="86001">🏢 شركة لوكاس الدولية (Cmp 86001 - 8 فواتير)</option>
-            <option value="1001">🏢 مجمع الأمل للرعاية الطبية (Cmp 1001 - 5 فواتير)</option>
-            <option value="607">🏢 شركة الفرع الرئيسي 607 (Cmp 607)</option>
-            <option value="39001">🏢 شركة التنمية والاستثمار التجاري (Cmp 39001)</option>
-            <option value="7014">🏢 مؤسسة الأعمال الحديثة (Cmp 7014)</option>
+          <optgroup label="⚡ الشركات المسجلة بالنظام (Active Enterprise Tenants)">
+            <option value="101" selected>🏢 شركة أوبكس العالمية للطاقة والوقود (Apex Global Energy - Cmp 101)</option>
+            <option value="201">🏢 شركة أطلس للملاحة والخدمات اللوجستية (Atlas Maritime Logistics - Cmp 201)</option>
+            <option value="301">🏢 مجموعة هورايزون للرعاية الطبية (Horizon Healthcare Group - Cmp 301)</option>
+            <option value="401">🏢 شركة فانجارد للتجارة والتوريدات (Vanguard General Trading - Cmp 401)</option>
           </optgroup>
-          <optgroup label="👥 كبرى قواعد العملاء (Top Customer Databases)">
-            <option value="79008">🏢 الشركة المتحدة للخدمات (Cmp 79008 - 34,762 عميل)</option>
-            <option value="55011">🏢 شركة التوزيع المتقدم (Cmp 55011 - 4,365 عميل)</option>
-            <option value="5003">🏢 مؤسسة الشرق الأوسط (Cmp 5003 - 2,663 عميل)</option>
-            <option value="6007">🏢 شركة التجارة الكبرى (Cmp 6007 - 1,965 عميل)</option>
-          </optgroup>
-          <optgroup label="🌐 استعلام عام شامل (Platform-Wide)">
-            <option value="0">🌐 جميع الشركات والأنشطة (Global Multi-Company Audit - 165 شركة)</option>
-          </optgroup>
+          <option value="0">🌐 جميع الشركات (Cross-Company Audit Mode)</option>
         </select>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="/infosas-ui" style="display: inline-flex; align-items: center; gap: 8px; background: #0F5CA8; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: var(--radius); font-weight: 700; font-size: 13px; border: 1px solid #2563eb; transition: background 0.2s;">
+          <span>🧾</span> قارئ الفواتير الذكي (Smart Invoice OCR)
+        </a>
       </div>
     </header>
 
@@ -837,6 +829,9 @@
         </button>
         <button class="sug-chip" onclick="selectSuggestion(3)">
           <span>🌐</span> مقارنة المبيعات بين جميع الشركات (Cross-Company)
+        </button>
+        <button class="sug-chip" onclick="selectSuggestion(4)">
+          <span>📦</span> نواقص المخزون والأصناف قرب النفاد (Stock Depletion)
         </button>
       </div>
 
@@ -1054,7 +1049,8 @@ LIMIT 5;
       "ما هي أعلى 5 أصناف مبيعاً من حيث إجمالي المبيعات؟",
       "من هم أعلى العملاء مديونية من حيث المبالغ المتبقية المستحقة؟",
       "اعرض لي قائمة المناديب وتوزيعهم على الفروع",
-      "ما هي أعلى 5 شركات من حيث إجمالي المبيعات عبر النظام بالكامل؟"
+      "ما هي أعلى 5 شركات من حيث إجمالي المبيعات عبر النظام بالكامل؟",
+      "ايه المنتجات اللي قربت تخلص من عندي"
     ];
 
     let mediaRecorder = null;
@@ -1350,14 +1346,27 @@ LIMIT 5;
           tableHead.appendChild(th);
         });
 
+        // Check if query is about inventory or stock depletion
+        const q = (document.getElementById("queryInput").value || "").toLowerCase();
+        if (q.includes("تخلص") || q.includes("نفاد") || q.includes("مخزون") || q.includes("سحب") || q.includes("stock")) {
+          document.getElementById("isolationBadge").textContent = "⚠️ تنبيه مراقبة حركة المخزون (Stock Alert)";
+          document.getElementById("isolationBadge").style.color = "#f59e0b";
+          document.getElementById("isolationBadge").style.borderColor = "rgba(245, 158, 11, 0.4)";
+        }
+
         rows.forEach(r => {
           const tr = document.createElement("tr");
           columns.forEach(col => {
             const td = document.createElement("td");
             const val = r[col];
+            const colLower = col.toLowerCase();
             if (typeof val === "number") {
-              td.textContent = val.toLocaleString("en-US", { maximumFractionDigits: 2 });
-              td.className = "num-col";
+              if (colLower.includes("كمية") || colLower.includes("مسحوبة") || colLower.includes("quantity")) {
+                td.innerHTML = `<span style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-family: var(--font-mono); font-size: 11px;">📦 ${val.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>`;
+              } else {
+                td.textContent = val.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                td.className = "num-col";
+              }
             } else {
               td.textContent = val !== null && val !== undefined ? val : "-";
             }
